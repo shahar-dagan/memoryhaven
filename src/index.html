@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MemoryHaven</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>MemoryHaven</h1>
+      <p>Your personal video diary</p>
+    </header>
+
+    <div class="video-container">
+      <video id="preview" autoplay muted></video>
+      <div class="controls">
+        <button id="startRecording" class="btn primary">Start Recording</button>
+        <button id="stopRecording" class="btn secondary" disabled>Stop Recording</button>
+      </div>
+    </div>
+
+    <div class="entries-container">
+      <h2>Recent Entries</h2>
+      <div id="entries-list">
+        <!-- Entries will be populated here -->
+        <p>No entries yet. Record your first memory!</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="../scripts/renderer.js"></script>
+</body>
+</html> 

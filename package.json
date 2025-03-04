@@ -1,0 +1,36 @@
+{
+  "name": "memoryhaven",
+  "version": "0.1.0",
+  "description": "A local-first video diary with AI transcription",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^latest",
+    "electron-builder": "^latest"
+  },
+  "devDependencies": {
+    "electron-reload": "^latest"
+  },
+  "build": {
+    "appId": "com.memoryhaven.app",
+    "productName": "MemoryHaven",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.lifestyle"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
