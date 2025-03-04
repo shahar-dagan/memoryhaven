@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { transcribeVideo } = require("./src/scripts/transcription-service");
+const { compressVideo } = require("./src/scripts/video-service");
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
@@ -91,6 +92,21 @@ ipcMain.handle("transcribe-video", async (event, videoPath) => {
     return result;
   } catch (error) {
     console.error("Error in transcription handler:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+});
+
+// Handle video compression requests
+ipcMain.handle("compress-video", async (event, videoPath, options) => {
+  try {
+    console.log(`Starting compression for: ${videoPath}`);
+    const result = await compressVideo(videoPath, options);
+    return result;
+  } catch (error) {
+    console.error("Error in compression handler:", error);
     return {
       success: false,
       error: error.message,

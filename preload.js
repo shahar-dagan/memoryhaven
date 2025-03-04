@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld("api", {
   saveRecording: (buffer) => ipcRenderer.invoke("save-recording", buffer),
   transcribeVideo: (videoPath) =>
     ipcRenderer.invoke("transcribe-video", videoPath),
+  compressVideo: (videoPath, options) =>
+    ipcRenderer.invoke("compress-video", videoPath, options),
 });
 
 // Preload script for exposing Node.js APIs to the renderer process
