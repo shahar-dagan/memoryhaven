@@ -66,8 +66,7 @@ function stopRecording() {
 
 // Save the recording
 async function saveRecording() {
-  // For now, just create a blob and display it
-  // Later we'll save to file system and process with Whisper
+  // Create a blob from the recorded chunks
   const blob = new Blob(recordedChunks, { type: "video/webm" });
   const url = URL.createObjectURL(blob);
 
@@ -76,12 +75,13 @@ async function saveRecording() {
   const dateString = date.toISOString().split("T")[0];
   const timeString = date.toTimeString().split(" ")[0];
 
+  // Create a loading entry
   const entryElement = document.createElement("div");
   entryElement.className = "entry";
   entryElement.innerHTML = `
     <h3>Entry: ${dateString} ${timeString}</h3>
     <video controls src="${url}" width="320"></video>
-    <p>Transcription pending...</p>
+    <p>Saving recording...</p>
     <hr>
   `;
 
@@ -93,13 +93,34 @@ async function saveRecording() {
   // Add to the beginning of the list
   entriesList.insertBefore(entryElement, entriesList.firstChild);
 
-  console.log("Recording saved temporarily");
+  try {
+    // Step 1: Save the file to disk
+    // Convert blob to ArrayBuffer for sending over IPC
+    const arrayBuffer = await blob.arrayBuffer();
+    const result = await window.api.saveRecording(arrayBuffer);
 
-  // In a real implementation, we would:
-  // 1. Save the file to disk
-  // 2. Extract audio and send to Whisper for transcription
-  // 3. Compress the video with FFmpeg
-  // 4. Update the database
+    if (result.success) {
+      console.log(`Recording saved to: ${result.filePath}`);
+
+      // Update the entry with the saved file information
+      entryElement.querySelector(
+        "p"
+      ).textContent = `Saved as: ${result.fileName}`;
+
+      // In a real implementation, we would continue with:
+      // 2. Extract audio and send to Whisper for transcription
+      // 3. Compress the video with FFmpeg
+      // 4. Update the database
+    } else {
+      console.error("Failed to save recording:", result.error);
+      entryElement.querySelector(
+        "p"
+      ).textContent = `Error saving: ${result.error}`;
+    }
+  } catch (error) {
+    console.error("Error in save process:", error);
+    entryElement.querySelector("p").textContent = `Error: ${error.message}`;
+  }
 }
 
 // Event listeners
