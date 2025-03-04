@@ -30,7 +30,7 @@ Thumbs.db
 # Add any application-specific files to ignore here
 
 *.txt
-*.md
+
 *.pdf
 *.docx
 *.doc
