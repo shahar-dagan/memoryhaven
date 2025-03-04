@@ -2,8 +2,6 @@
 
 A local-first video diary application with AI-powered transcription capabilities.
 
-![MemoryHaven Logo](src/assets/logo.png)
-
 ## 📝 Description
 
 MemoryHaven is a desktop application that allows you to record, store, and search through video diary entries. It uses AI transcription to make your memories searchable and provides a heatmap visualization to track your journaling consistency.
