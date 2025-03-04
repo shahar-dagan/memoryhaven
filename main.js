@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const { transcribeVideo } = require("./src/scripts/transcription-service");
 const { compressVideo } = require("./src/scripts/video-service");
-const db = require("./src/scripts/database-service");
+const db = require("./src/scripts/database-service-lite");
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
@@ -11,6 +11,9 @@ let mainWindow;
 // Create a directory for storing recordings if it doesn't exist
 const userDataPath = app.getPath("userData");
 const recordingsPath = path.join(userDataPath, "recordings");
+
+// Add a variable to track database initialization status
+let dbInitialized = false;
 
 function ensureDirectoryExists(directory) {
   if (!fs.existsSync(directory)) {
@@ -44,11 +47,18 @@ function createWindow() {
 }
 
 // Create window when Electron has finished initialization
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   ensureDirectoryExists(recordingsPath);
 
-  // Initialize database
-  db.initializeDatabase();
+  // Try to initialize database
+  try {
+    await db.initializeDatabase();
+    dbInitialized = true;
+    console.log("Database initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+    dbInitialized = false;
+  }
 
   createWindow();
 });
@@ -68,8 +78,14 @@ app.on("activate", () => {
 });
 
 // Close database connection when app is about to quit
-app.on("will-quit", () => {
-  db.closeDatabase();
+app.on("will-quit", async () => {
+  if (dbInitialized) {
+    try {
+      await db.closeDatabase();
+    } catch (error) {
+      console.error("Error closing database:", error);
+    }
+  }
 });
 
 // Handle IPC messages from renderer process
@@ -126,61 +142,163 @@ ipcMain.handle("compress-video", async (event, videoPath, options) => {
 
 // Database operations
 ipcMain.handle("db-add-entry", async (event, entry) => {
-  return db.addEntry(entry);
+  if (!dbInitialized) {
+    return {
+      success: false,
+      error: "Database is not available",
+    };
+  }
+
+  try {
+    return await db.addEntry(entry);
+  } catch (error) {
+    console.error("Error adding entry:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
 });
 
 ipcMain.handle("db-update-entry", async (event, id, updates) => {
-  return db.updateEntry(id, updates);
+  if (!dbInitialized) {
+    return {
+      success: false,
+      error: "Database is not available",
+    };
+  }
+
+  try {
+    return await db.updateEntry(id, updates);
+  } catch (error) {
+    console.error("Error updating entry:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
 });
 
 ipcMain.handle("db-get-entry", async (event, id) => {
-  return db.getEntryById(id);
+  if (!dbInitialized) {
+    return {
+      success: false,
+      error: "Database is not available",
+    };
+  }
+
+  try {
+    return await db.getEntryById(id);
+  } catch (error) {
+    console.error("Error getting entry:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
 });
 
 ipcMain.handle("db-get-all-entries", async (event, limit, offset) => {
+  if (!dbInitialized) {
+    return {
+      success: false,
+      error: "Database is not available",
+      entries: [], // Return empty array as fallback
+    };
+  }
+
   try {
-    return db.getAllEntries(limit, offset);
+    return await db.getAllEntries(limit, offset);
   } catch (error) {
     console.error("Error getting entries:", error);
     return {
       success: false,
       error: error.message,
-      entries: [], // Return empty array as fallback
+      entries: [],
     };
   }
 });
 
 ipcMain.handle("db-delete-entry", async (event, id) => {
-  const result = db.deleteEntry(id);
-
-  // If successful and we have file paths, delete the files
-  if (result.success && result.filePaths) {
-    try {
-      if (
-        result.filePaths.originalPath &&
-        fs.existsSync(result.filePaths.originalPath)
-      ) {
-        fs.unlinkSync(result.filePaths.originalPath);
-      }
-
-      if (
-        result.filePaths.compressedPath &&
-        fs.existsSync(result.filePaths.compressedPath)
-      ) {
-        fs.unlinkSync(result.filePaths.compressedPath);
-      }
-    } catch (error) {
-      console.error("Error deleting files:", error);
-    }
+  if (!dbInitialized) {
+    return {
+      success: false,
+      error: "Database is not available",
+    };
   }
 
-  return result;
+  try {
+    const result = await db.deleteEntry(id);
+
+    // If successful and we have file paths, delete the files
+    if (result.success && result.filePaths) {
+      try {
+        if (
+          result.filePaths.originalPath &&
+          fs.existsSync(result.filePaths.originalPath)
+        ) {
+          fs.unlinkSync(result.filePaths.originalPath);
+        }
+
+        if (
+          result.filePaths.compressedPath &&
+          fs.existsSync(result.filePaths.compressedPath)
+        ) {
+          fs.unlinkSync(result.filePaths.compressedPath);
+        }
+      } catch (error) {
+        console.error("Error deleting files:", error);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error deleting entry:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
 });
 
 ipcMain.handle("db-search-entries", async (event, query) => {
-  return db.searchEntries(query);
+  if (!dbInitialized) {
+    return {
+      success: false,
+      error: "Database is not available",
+      entries: [],
+    };
+  }
+
+  try {
+    return await db.searchEntries(query);
+  } catch (error) {
+    console.error("Error searching entries:", error);
+    return {
+      success: false,
+      error: error.message,
+      entries: [],
+    };
+  }
 });
 
 ipcMain.handle("db-get-all-tags", async (event) => {
-  return db.getAllTags();
+  if (!dbInitialized) {
+    return {
+      success: false,
+      error: "Database is not available",
+      tags: [],
+    };
+  }
+
+  try {
+    return await db.getAllTags();
+  } catch (error) {
+    console.error("Error getting tags:", error);
+    return {
+      success: false,
+      error: error.message,
+      tags: [],
+    };
+  }
 });

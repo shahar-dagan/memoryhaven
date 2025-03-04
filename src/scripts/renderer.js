@@ -341,11 +341,21 @@ async function loadEntries() {
         "<p>No entries yet. Record your first memory!</p>";
     } else {
       console.error("Failed to load entries:", result.error);
-      entriesList.innerHTML = `<p class="error">Error loading entries: ${result.error}</p>`;
+      entriesList.innerHTML = `
+        <div class="error-message">
+          <p>Could not load your entries: ${result.error}</p>
+          <p>Your recordings will still be saved, but they may not appear in this list.</p>
+        </div>
+      `;
     }
   } catch (error) {
     console.error("Error loading entries:", error);
-    entriesList.innerHTML = `<p class="error">Error loading entries: ${error.message}</p>`;
+    entriesList.innerHTML = `
+      <div class="error-message">
+        <p>Error loading entries: ${error.message}</p>
+        <p>Your recordings will still be saved, but they may not appear in this list.</p>
+      </div>
+    `;
   }
 }
 

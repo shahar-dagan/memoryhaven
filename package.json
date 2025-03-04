@@ -12,11 +12,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
     "electron": "latest",
     "electron-builder": "latest",
     "fluent-ffmpeg": "^2.1.2",
-    "node-whisper": "latest"
+    "node-whisper": "latest",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "electron-rebuild": "^3.2.9",
