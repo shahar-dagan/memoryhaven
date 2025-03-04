@@ -3,6 +3,8 @@ const videoElement = document.getElementById("preview");
 const startButton = document.getElementById("startRecording");
 const stopButton = document.getElementById("stopRecording");
 const entriesList = document.getElementById("entries-list");
+const searchInput = document.getElementById("search-input");
+const searchButton = document.getElementById("search-button");
 
 // Global variables
 let mediaRecorder;
@@ -112,8 +114,10 @@ async function saveRecording() {
         saveResult.filePath
       );
 
+      let transcription = "";
       if (transcriptionResult.success) {
         console.log("Transcription completed");
+        transcription = transcriptionResult.transcription;
 
         // Update status message
         entryElement.querySelector(
@@ -141,29 +145,99 @@ async function saveRecording() {
           // Create a URL for the compressed video
           const compressedVideoUrl = `file://${compressionResult.compressedPath}`;
 
-          // Update the entry with the transcription and compressed video
-          entryElement.innerHTML = `
-            <h3>Entry: ${dateString} ${timeString}</h3>
-            <video controls src="${compressedVideoUrl}" width="320"></video>
-            <div class="transcription">
-              <h4>Transcription:</h4>
-              <p>${transcriptionResult.transcription}</p>
-            </div>
-            <div class="video-info">
-              <p>Original: ${saveResult.fileName} (${formatFileSize(
-            getFileSize(saveResult.filePath)
-          )})</p>
-              <p>Compressed: ${compressionResult.fileName} (${formatFileSize(
-            getFileSize(compressionResult.compressedPath)
-          )})</p>
-            </div>
-            <hr>
-          `;
+          // Get file sizes
+          const originalSize = getFileSize(saveResult.filePath);
+          const compressedSize = getFileSize(compressionResult.compressedPath);
 
-          // In a real implementation, we would continue with:
-          // 4. Update the database
+          // Step 4: Save to database
+          const entryData = {
+            title: `Entry ${dateString}`,
+            date: dateString,
+            time: timeString,
+            originalPath: saveResult.filePath,
+            compressedPath: compressionResult.compressedPath,
+            transcription: transcription,
+            fileSize: originalSize,
+            compressedSize: compressedSize,
+            // Extract tags from transcription (simple implementation)
+            tags: extractTagsFromTranscription(transcription),
+          };
+
+          const dbResult = await window.api.db.addEntry(entryData);
+
+          if (dbResult.success) {
+            console.log(`Entry saved to database with ID: ${dbResult.entryId}`);
+
+            // Update the entry with all information
+            entryElement.innerHTML = `
+              <h3>Entry: ${dateString} ${timeString}</h3>
+              <video controls src="${compressedVideoUrl}" width="320"></video>
+              <div class="transcription">
+                <h4>Transcription:</h4>
+                <p>${transcription}</p>
+              </div>
+              <div class="video-info">
+                <p>Original: ${saveResult.fileName} (${formatFileSize(
+              originalSize
+            )})</p>
+                <p>Compressed: ${compressionResult.fileName} (${formatFileSize(
+              compressedSize
+            )})</p>
+              </div>
+              <div class="entry-actions">
+                <button class="btn small" onclick="deleteEntry(${
+                  dbResult.entryId
+                })">Delete</button>
+              </div>
+              <hr>
+            `;
+
+            // Add data attribute for entry ID
+            entryElement.dataset.entryId = dbResult.entryId;
+          } else {
+            console.error("Failed to save entry to database:", dbResult.error);
+
+            // Update the entry with compression and transcription info
+            entryElement.innerHTML = `
+              <h3>Entry: ${dateString} ${timeString}</h3>
+              <video controls src="${compressedVideoUrl}" width="320"></video>
+              <div class="transcription">
+                <h4>Transcription:</h4>
+                <p>${transcription}</p>
+              </div>
+              <div class="video-info">
+                <p>Original: ${saveResult.fileName} (${formatFileSize(
+              originalSize
+            )})</p>
+                <p>Compressed: ${compressionResult.fileName} (${formatFileSize(
+              compressedSize
+            )})</p>
+              </div>
+              <p class="error">Database error: ${dbResult.error}</p>
+              <hr>
+            `;
+          }
         } else {
           console.error("Video compression failed:", compressionResult.error);
+
+          // Save to database without compression info
+          const entryData = {
+            title: `Entry ${dateString}`,
+            date: dateString,
+            time: timeString,
+            originalPath: saveResult.filePath,
+            transcription: transcription,
+            fileSize: getFileSize(saveResult.filePath),
+            tags: extractTagsFromTranscription(transcription),
+          };
+
+          const dbResult = await window.api.db.addEntry(entryData);
+
+          if (dbResult.success) {
+            console.log(`Entry saved to database with ID: ${dbResult.entryId}`);
+          } else {
+            console.error("Failed to save entry to database:", dbResult.error);
+          }
 
           // Update the entry with just the transcription
           entryElement.innerHTML = `
@@ -171,17 +245,56 @@ async function saveRecording() {
             <video controls src="${url}" width="320"></video>
             <div class="transcription">
               <h4>Transcription:</h4>
-              <p>${transcriptionResult.transcription}</p>
+              <p>${transcription}</p>
             </div>
             <p class="error">Compression failed: ${compressionResult.error}</p>
+            <div class="entry-actions">
+              ${
+                dbResult.success
+                  ? `<button class="btn small" onclick="deleteEntry(${dbResult.entryId})">Delete</button>`
+                  : ""
+              }
+            </div>
             <hr>
           `;
+
+          if (dbResult.success) {
+            entryElement.dataset.entryId = dbResult.entryId;
+          }
         }
       } else {
         console.error("Transcription failed:", transcriptionResult.error);
+
+        // Save to database without transcription
+        const entryData = {
+          title: `Entry ${dateString}`,
+          date: dateString,
+          time: timeString,
+          originalPath: saveResult.filePath,
+          fileSize: getFileSize(saveResult.filePath),
+        };
+
+        const dbResult = await window.api.db.addEntry(entryData);
+
+        if (dbResult.success) {
+          console.log(`Entry saved to database with ID: ${dbResult.entryId}`);
+        } else {
+          console.error("Failed to save entry to database:", dbResult.error);
+        }
+
         entryElement.querySelector(
           "p"
         ).textContent = `Saved as: ${saveResult.fileName}. Transcription failed: ${transcriptionResult.error}`;
+
+        if (dbResult.success) {
+          entryElement.dataset.entryId = dbResult.entryId;
+
+          // Add delete button
+          const actionsDiv = document.createElement("div");
+          actionsDiv.className = "entry-actions";
+          actionsDiv.innerHTML = `<button class="btn small" onclick="deleteEntry(${dbResult.entryId})">Delete</button>`;
+          entryElement.appendChild(actionsDiv);
+        }
       }
     } else {
       console.error("Failed to save recording:", saveResult.error);
@@ -193,6 +306,59 @@ async function saveRecording() {
     console.error("Error in save process:", error);
     entryElement.querySelector("p").textContent = `Error: ${error.message}`;
   }
+}
+
+// Load all entries from the database
+async function loadEntries() {
+  try {
+    const result = await window.api.db.getAllEntries();
+
+    if (result.success && result.entries.length > 0) {
+      // Clear the entries list
+      entriesList.innerHTML = "";
+
+      // Add each entry to the list
+      result.entries.forEach((entry) => {
+        const entryElement = createEntryElement(entry);
+        entriesList.appendChild(entryElement);
+      });
+    } else if (result.success) {
+      // No entries found
+      entriesList.innerHTML =
+        "<p>No entries yet. Record your first memory!</p>";
+    } else {
+      console.error("Failed to load entries:", result.error);
+      entriesList.innerHTML = `<p class="error">Error loading entries: ${result.error}</p>`;
+    }
+  } catch (error) {
+    console.error("Error loading entries:", error);
+    entriesList.innerHTML = `<p class="error">Error loading entries: ${error.message}</p>`;
+  }
+}
+
+// Create an entry element from database data
+function createEntryElement(entry) {
+  const entryElement = document.createElement("div");
+  entryElement.className = "entry";
+  entryElement.innerHTML = `
+    <h3>Entry: ${entry.date} ${entry.time}</h3>
+    <video controls src="${entry.originalPath}" width="320"></video>
+    <div class="transcription">
+      <h4>Transcription:</h4>
+      <p>${entry.transcription}</p>
+    </div>
+    <div class="video-info">
+      <p>Original: ${entry.fileName} (${formatFileSize(entry.fileSize)})</p>
+    </div>
+    <div class="entry-actions">
+      <button class="btn small" onclick="deleteEntry(${
+        entry.id
+      })">Delete</button>
+    </div>
+    <hr>
+  `;
+  entryElement.dataset.entryId = entry.id;
+  return entryElement;
 }
 
 // Helper function to get file size

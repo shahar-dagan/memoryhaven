@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const { transcribeVideo } = require("./src/scripts/transcription-service");
 const { compressVideo } = require("./src/scripts/video-service");
+const db = require("./src/scripts/database-service");
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
@@ -45,6 +46,10 @@ function createWindow() {
 // Create window when Electron has finished initialization
 app.whenReady().then(() => {
   ensureDirectoryExists(recordingsPath);
+
+  // Initialize database
+  db.initializeDatabase();
+
   createWindow();
 });
 
@@ -60,6 +65,11 @@ app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
   }
+});
+
+// Close database connection when app is about to quit
+app.on("will-quit", () => {
+  db.closeDatabase();
 });
 
 // Handle IPC messages from renderer process
@@ -112,4 +122,56 @@ ipcMain.handle("compress-video", async (event, videoPath, options) => {
       error: error.message,
     };
   }
+});
+
+// Database operations
+ipcMain.handle("db-add-entry", async (event, entry) => {
+  return db.addEntry(entry);
+});
+
+ipcMain.handle("db-update-entry", async (event, id, updates) => {
+  return db.updateEntry(id, updates);
+});
+
+ipcMain.handle("db-get-entry", async (event, id) => {
+  return db.getEntryById(id);
+});
+
+ipcMain.handle("db-get-all-entries", async (event, limit, offset) => {
+  return db.getAllEntries(limit, offset);
+});
+
+ipcMain.handle("db-delete-entry", async (event, id) => {
+  const result = db.deleteEntry(id);
+
+  // If successful and we have file paths, delete the files
+  if (result.success && result.filePaths) {
+    try {
+      if (
+        result.filePaths.originalPath &&
+        fs.existsSync(result.filePaths.originalPath)
+      ) {
+        fs.unlinkSync(result.filePaths.originalPath);
+      }
+
+      if (
+        result.filePaths.compressedPath &&
+        fs.existsSync(result.filePaths.compressedPath)
+      ) {
+        fs.unlinkSync(result.filePaths.compressedPath);
+      }
+    } catch (error) {
+      console.error("Error deleting files:", error);
+    }
+  }
+
+  return result;
+});
+
+ipcMain.handle("db-search-entries", async (event, query) => {
+  return db.searchEntries(query);
+});
+
+ipcMain.handle("db-get-all-tags", async (event) => {
+  return db.getAllTags();
 });
