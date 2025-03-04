@@ -11,11 +11,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "electron": "^latest",
-    "electron-builder": "^latest"
+    "electron": "latest",
+    "electron-builder": "latest",
+    "node-whisper": "latest",
+    "fluent-ffmpeg": "^2.1.2"
   },
   "devDependencies": {
-    "electron-reload": "^latest"
+    "electron-reload": "latest"
   },
   "build": {
     "appId": "com.memoryhaven.app",
@@ -31,6 +33,12 @@
     },
     "linux": {
       "target": "AppImage"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "models",
+        "to": "models"
+      }
+    ]
   }
 }

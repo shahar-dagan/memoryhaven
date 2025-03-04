@@ -4,6 +4,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld("api", {
   saveRecording: (buffer) => ipcRenderer.invoke("save-recording", buffer),
+  transcribeVideo: (videoPath) =>
+    ipcRenderer.invoke("transcribe-video", videoPath),
 });
 
 // Preload script for exposing Node.js APIs to the renderer process

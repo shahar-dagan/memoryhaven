@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { transcribeVideo } = require("./src/scripts/transcription-service");
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
@@ -23,7 +24,7 @@ function createWindow() {
     height: 800,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false,
+      contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -75,6 +76,21 @@ ipcMain.handle("save-recording", async (event, buffer) => {
     };
   } catch (error) {
     console.error("Error saving recording:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+});
+
+// Handle transcription requests
+ipcMain.handle("transcribe-video", async (event, videoPath) => {
+  try {
+    console.log(`Starting transcription for: ${videoPath}`);
+    const result = await transcribeVideo(videoPath);
+    return result;
+  } catch (error) {
+    console.error("Error in transcription handler:", error);
     return {
       success: false,
       error: error.message,

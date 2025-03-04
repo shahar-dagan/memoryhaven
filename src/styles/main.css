@@ -98,4 +98,22 @@ header h1 {
 
 #entries-list {
   min-height: 200px;
+}
+
+.transcription {
+  margin-top: 10px;
+  background-color: #f5f5f5;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.transcription h4 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.transcription p {
+  margin: 0;
+  line-height: 1.5;
 } 

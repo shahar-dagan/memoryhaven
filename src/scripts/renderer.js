@@ -97,25 +97,49 @@ async function saveRecording() {
     // Step 1: Save the file to disk
     // Convert blob to ArrayBuffer for sending over IPC
     const arrayBuffer = await blob.arrayBuffer();
-    const result = await window.api.saveRecording(arrayBuffer);
+    const saveResult = await window.api.saveRecording(arrayBuffer);
 
-    if (result.success) {
-      console.log(`Recording saved to: ${result.filePath}`);
+    if (saveResult.success) {
+      console.log(`Recording saved to: ${saveResult.filePath}`);
 
       // Update the entry with the saved file information
       entryElement.querySelector(
         "p"
-      ).textContent = `Saved as: ${result.fileName}`;
+      ).textContent = `Saved as: ${saveResult.fileName}. Transcribing...`;
 
-      // In a real implementation, we would continue with:
-      // 2. Extract audio and send to Whisper for transcription
-      // 3. Compress the video with FFmpeg
-      // 4. Update the database
+      // Step 2: Extract audio and send to Whisper for transcription
+      const transcriptionResult = await window.api.transcribeVideo(
+        saveResult.filePath
+      );
+
+      if (transcriptionResult.success) {
+        console.log("Transcription completed");
+
+        // Update the entry with the transcription
+        entryElement.innerHTML = `
+          <h3>Entry: ${dateString} ${timeString}</h3>
+          <video controls src="${url}" width="320"></video>
+          <div class="transcription">
+            <h4>Transcription:</h4>
+            <p>${transcriptionResult.transcription}</p>
+          </div>
+          <hr>
+        `;
+
+        // In a real implementation, we would continue with:
+        // 3. Compress the video with FFmpeg
+        // 4. Update the database
+      } else {
+        console.error("Transcription failed:", transcriptionResult.error);
+        entryElement.querySelector(
+          "p"
+        ).textContent = `Saved as: ${saveResult.fileName}. Transcription failed: ${transcriptionResult.error}`;
+      }
     } else {
-      console.error("Failed to save recording:", result.error);
+      console.error("Failed to save recording:", saveResult.error);
       entryElement.querySelector(
         "p"
-      ).textContent = `Error saving: ${result.error}`;
+      ).textContent = `Error saving: ${saveResult.error}`;
     }
   } catch (error) {
     console.error("Error in save process:", error);
