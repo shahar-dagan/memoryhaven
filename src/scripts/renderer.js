@@ -10,6 +10,7 @@ const searchButton = document.getElementById("search-button");
 let mediaRecorder;
 let recordedChunks = [];
 let stream;
+let heatmap;
 
 // Initialize camera preview
 async function initializeCamera() {
@@ -194,6 +195,9 @@ async function saveRecording() {
 
             // Add data attribute for entry ID
             entryElement.dataset.entryId = dbResult.entryId;
+
+            // Update heatmap
+            updateHeatmap();
           } else {
             console.error("Failed to save entry to database:", dbResult.error);
 
@@ -216,6 +220,9 @@ async function saveRecording() {
               <p class="error">Database error: ${dbResult.error}</p>
               <hr>
             `;
+
+            // Update heatmap
+            updateHeatmap();
           }
         } else {
           console.error("Video compression failed:", compressionResult.error);
@@ -235,31 +242,34 @@ async function saveRecording() {
 
           if (dbResult.success) {
             console.log(`Entry saved to database with ID: ${dbResult.entryId}`);
-          } else {
-            console.error("Failed to save entry to database:", dbResult.error);
-          }
 
-          // Update the entry with just the transcription
-          entryElement.innerHTML = `
-            <h3>Entry: ${dateString} ${timeString}</h3>
-            <video controls src="${url}" width="320"></video>
-            <div class="transcription">
-              <h4>Transcription:</h4>
-              <p>${transcription}</p>
-            </div>
-            <p class="error">Compression failed: ${compressionResult.error}</p>
-            <div class="entry-actions">
-              ${
-                dbResult.success
-                  ? `<button class="btn small" onclick="deleteEntry(${dbResult.entryId})">Delete</button>`
-                  : ""
-              }
-            </div>
-            <hr>
-          `;
+            // Update the entry with just the transcription
+            entryElement.innerHTML = `
+              <h3>Entry: ${dateString} ${timeString}</h3>
+              <video controls src="${url}" width="320"></video>
+              <div class="transcription">
+                <h4>Transcription:</h4>
+                <p>${transcription}</p>
+              </div>
+              <p class="error">Compression failed: ${
+                compressionResult.error
+              }</p>
+              <div class="entry-actions">
+                ${
+                  dbResult.success
+                    ? `<button class="btn small" onclick="deleteEntry(${dbResult.entryId})">Delete</button>`
+                    : ""
+                }
+              </div>
+              <hr>
+            `;
 
-          if (dbResult.success) {
-            entryElement.dataset.entryId = dbResult.entryId;
+            if (dbResult.success) {
+              entryElement.dataset.entryId = dbResult.entryId;
+            }
+
+            // Update heatmap
+            updateHeatmap();
           }
         }
       } else {
@@ -294,6 +304,9 @@ async function saveRecording() {
           actionsDiv.className = "entry-actions";
           actionsDiv.innerHTML = `<button class="btn small" onclick="deleteEntry(${dbResult.entryId})">Delete</button>`;
           entryElement.appendChild(actionsDiv);
+
+          // Update heatmap
+          updateHeatmap();
         }
       }
     } else {
@@ -313,7 +326,7 @@ async function loadEntries() {
   try {
     const result = await window.api.db.getAllEntries();
 
-    if (result.success && result.entries.length > 0) {
+    if (result.success && result.entries && result.entries.length > 0) {
       // Clear the entries list
       entriesList.innerHTML = "";
 
@@ -388,4 +401,35 @@ startButton.addEventListener("click", startRecording);
 stopButton.addEventListener("click", stopRecording);
 
 // Initialize camera on page load
-document.addEventListener("DOMContentLoaded", initializeCamera);
+document.addEventListener("DOMContentLoaded", () => {
+  initializeCamera();
+  initializeHeatmap();
+  loadEntries();
+});
+
+// Function to initialize the heatmap
+function initializeHeatmap() {
+  heatmap = new EntryHeatmap("consistency-heatmap", {
+    weeksToShow: 26, // Show 6 months
+    cellSize: 14,
+    cellMargin: 3,
+  });
+
+  // Load data for the heatmap
+  updateHeatmap();
+}
+
+// Function to update the heatmap with latest data
+async function updateHeatmap() {
+  try {
+    const result = await window.api.db.getAllEntries(1000);
+
+    if (result.success && result.entries && heatmap) {
+      heatmap.update(result.entries);
+    } else if (!result.success) {
+      console.error("Failed to load entries for heatmap:", result.error);
+    }
+  } catch (error) {
+    console.error("Error updating heatmap:", error);
+  }
+}

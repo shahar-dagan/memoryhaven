@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "author": "",
   "license": "MIT",
@@ -18,6 +19,7 @@
     "node-whisper": "latest"
   },
   "devDependencies": {
+    "electron-rebuild": "^3.2.9",
     "electron-reload": "latest"
   },
   "build": {

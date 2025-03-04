@@ -138,7 +138,16 @@ ipcMain.handle("db-get-entry", async (event, id) => {
 });
 
 ipcMain.handle("db-get-all-entries", async (event, limit, offset) => {
-  return db.getAllEntries(limit, offset);
+  try {
+    return db.getAllEntries(limit, offset);
+  } catch (error) {
+    console.error("Error getting entries:", error);
+    return {
+      success: false,
+      error: error.message,
+      entries: [], // Return empty array as fallback
+    };
+  }
 });
 
 ipcMain.handle("db-delete-entry", async (event, id) => {

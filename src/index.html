@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>MemoryHaven</title>
   <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/heatmap.css">
 </head>
 <body>
   <div class="container">
@@ -19,6 +20,14 @@
         <button id="stopRecording" class="btn secondary" disabled>Stop Recording</button>
       </div>
     </div>
+    
+    <!-- Add the heatmap container -->
+    <div id="consistency-heatmap" class="consistency-section"></div>
+
+    <div class="search-container">
+      <input type="text" id="search-input" placeholder="Search entries...">
+      <button id="search-button" class="btn">Search</button>
+    </div>
 
     <div class="entries-container">
       <h2>Recent Entries</h2>
@@ -29,6 +38,7 @@
     </div>
   </div>
 
-  <script src="../scripts/renderer.js"></script>
+  <script src="scripts/heatmap.js"></script>
+  <script src="scripts/renderer.js"></script>
 </body>
 </html> 

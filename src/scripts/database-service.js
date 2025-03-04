@@ -7,7 +7,8 @@ const userDataPath = app.getPath("userData");
 const dbPath = path.join(userDataPath, "memoryhaven.db");
 
 // Initialize database
-let db;
+let db = null;
+let isInitialized = false;
 
 function initializeDatabase() {
   try {
@@ -17,10 +18,12 @@ function initializeDatabase() {
     // Create tables if they don't exist
     createTables();
 
+    isInitialized = true;
     console.log("Database initialized successfully");
     return true;
   } catch (error) {
     console.error("Error initializing database:", error);
+    isInitialized = false;
     return false;
   }
 }
@@ -69,6 +72,15 @@ function createTables() {
   ).run();
 
   console.log("Database tables created");
+}
+
+// Add this helper function
+function ensureDbIsInitialized() {
+  if (!isInitialized || !db) {
+    throw new Error(
+      "Database is not initialized. Call initializeDatabase() first."
+    );
+  }
 }
 
 // Entry operations
@@ -203,6 +215,7 @@ function getEntryById(id) {
 
 function getAllEntries(limit = 100, offset = 0) {
   try {
+    ensureDbIsInitialized();
     const entries = db
       .prepare(
         `
