@@ -1,2 +1,7 @@
-.txt
-prompt.txt 
+
+*.txt
+*.md
+*.pdf
+*.docx
+*.doc
+*.xls
